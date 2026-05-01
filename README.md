@@ -42,7 +42,7 @@
   - `API_KEYS`: 透過讀取目錄下 `.env` 檔內所有 `SERPAPI_KEY` 開頭的環境變數。
   - `target_amount`: 預設抓取評論數量 (設定為 >50 筆)。
   - `"sort_by": "qualityScore"`: 「最相關」排序（預設）。
-    > **Note**: `qualityScore` 排序蒐集到的比較會是有評論文字而非只有星等。其他可調整的選項包含：`newestFirst`（最新）、`ratingHigh`（最高分）、`ratingLow`（最低分）。
+    > **Note**: `qualityScore` 排序蒐集到的比較會是有評論文字而非只有星等。其他選項包含：`newestFirst`（最新）、`ratingHigh`（最高分）、`ratingLow`（最低分）。
 - **使用方式**：直接執行程式，並在終端機輸入 Google Maps 網址。
 
 ### 2. `review_processor.py` (評論處理與假評過濾)
