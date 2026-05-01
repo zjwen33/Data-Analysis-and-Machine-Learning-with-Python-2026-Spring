@@ -1,6 +1,6 @@
 # Google Maps 評論分析與決策支援系統
 
-> **Note**: 評論不足的情況有待開發。
+> **Note**: 針對評論不足情況的處理有待開發。
 
 這是一個基於 Python 的 Google Maps 評論獲取、清洗與分析系統。本系統旨在自動抓取指定地標的 Google 評論，過濾掉潛在的「打卡送禮」等誘因性假評論，並透過關鍵字分析真實評論的正負向特徵，最後產出一份可解釋性（XAI）的決策支援報告，幫助使用者判斷是否前往該地點。
 
@@ -11,10 +11,12 @@
 整個系統分為三個主要階段，由三支主要程式依序執行：
 
 1. **第一階段：資料獲取 (`review_fetcher.py`)**
-   - 使用者輸入 Google Maps 的分享短網址（如 `https://maps.app.goo.gl/...`）。（**Note**: 實際上，非短網址亦可解析）
+   - 使用者輸入 Google Maps 的分享短網址（如 `https://maps.app.goo.gl/...`）。
+     > **Note**: 實際上，非短網址亦可解析。
    - 系統將短網址展開並擷取出地標的識別碼 (`data_id` 與 `data_cid`)。
    - 透過 SerpApi 呼叫 Google Maps API 獲取地標詳細資訊與最新評論（預設抓取至少 50 筆，對應 4 次 API 呼叫，實際可能因 API 返回結果而有所差異）。
-   - 將原始資料存入本地端 SQLite 資料庫 (`reviews.db`) 進行快取，避免重複消耗 API 額度（快取有效期限預設為 30 天）。> **Note**: 此設定可以節省 API Key 額度，但如果要確保資料庫中的資料為最新資料，建議改為 7 天。）
+   - 將原始資料存入本地端 SQLite 資料庫 (`reviews.db`) 進行快取，避免重複消耗 API 額度（快取有效期限預設為 30 天）。
+     > **Note**: 此設定可以節省 API Key 額度，但如果要確保資料庫中的資料為最新資料，建議改為 7 天。
 
 2. **第二階段：資料清洗與數據分析 (`review_processor.py`)**
    - 讀取資料庫中尚未處理的原始評論資料。
@@ -33,14 +35,14 @@
 ## 📁 檔案功能與參數說明
 
 ### 1. `review_fetcher.py` (資料獲取)
-- **功能**：負責與 SerpApi 溝通，抓取 Google Maps 的地點資訊與評論資料，並寫入資料庫進行快取。支援多組 API Keys 自動輪替以避免配額耗盡。
+- **功能**：負責與 SerpApi 溝通，抓取 Google Maps 的地點資訊與評論資料，並寫入資料庫進行快取。支援多組 API Keys 隨機輪替以避免配額耗盡。
 - **主要參數/變數**：
   - `DB_PATH`: 指定資料庫路徑 (預設 `reviews.db`)。
   - `hl_lang`: API 請求的語言設定 (預設 `"zh-tw"`)。
   - `API_KEYS`: 透過讀取目錄下 `.env` 檔內所有 `SERPAPI_KEY` 開頭的環境變數。
   - `target_amount`: 預設抓取評論數量 (設定為 >50 筆)。
   - `"sort_by": "qualityScore"`: 「最相關」排序（預設）。
-   （**Note**:`qualityScore` 排序蒐集到的比較會是有評論文字而非只有星等。其他可調整的選項包含：`newestFirst`（最新）、`ratingHigh`（最高分）、`ratingLow`（最低分）。）
+    > **Note**: `qualityScore` 排序蒐集到的比較會是有評論文字而非只有星等。其他可調整的選項包含：`newestFirst`（最新）、`ratingHigh`（最高分）、`ratingLow`（最低分）。
 - **使用方式**：直接執行程式，並在終端機輸入 Google Maps 網址。
 
 ### 2. `review_processor.py` (評論處理與假評過濾)
@@ -74,7 +76,7 @@
 ### 5. 測試與輔助工具
 - **`clear_dbs.py`**: 用於清除或重置資料庫的測試工具。
 - **`reviews.db`**: SQLite 資料庫檔案，負責儲存 API 抓取下來的快取資料與分析結果。
-**Note**: 可使用 DB Browser for SQLite 等軟體查看資料庫結構與內容。
+  > **Note**: 可使用 DB Browser for SQLite 等軟體查看資料庫結構與內容。
 
 ---
 
