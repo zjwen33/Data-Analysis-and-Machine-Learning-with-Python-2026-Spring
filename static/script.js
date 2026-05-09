@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             html += `
                 <div class="stars-bar">
-                    <div class="stars-label">${star} ★</div>
+                    <div class="stars-label"><span class="star-num">${star}</span> <span class="star-icon">★</span></div>
                     <div class="stars-track">
                         <div class="stars-fill" style="width: 0%" data-width="${percentage}%"></div>
                     </div>

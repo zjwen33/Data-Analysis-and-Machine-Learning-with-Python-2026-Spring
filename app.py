@@ -1,7 +1,7 @@
 import uvicorn
 from fastapi import FastAPI, HTTPException, Body
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import os
 from review_fetcher import get_place_and_reviews, load_api_keys, extract_data_id
@@ -16,8 +16,8 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
 def read_root():
-    """自動導向至前端首頁"""
-    return RedirectResponse(url="/static/index.html")
+    """直接回傳前端首頁 HTML，不改變網址"""
+    return FileResponse("static/index.html")
 
 class AnalyzeRequest(BaseModel):
     url: str

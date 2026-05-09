@@ -65,8 +65,13 @@ body {
 }
 
 @keyframes float {
-    0% { transform: translate(0, 0) scale(1); }
-    100% { transform: translate(50px, 50px) scale(1.1); }
+    0% {
+        transform: translate(0, 0) scale(1);
+    }
+
+    100% {
+        transform: translate(50px, 50px) scale(1.1);
+    }
 }
 
 .container {
@@ -178,7 +183,9 @@ button:active {
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .hidden {
@@ -252,9 +259,24 @@ button:active {
 }
 
 .stars-label {
-    width: 30px;
+    width: 45px;
     font-weight: 600;
     color: var(--warning);
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.star-num {
+    flex: 1;
+    text-align: center;
+    transform: translateY(0px);
+}
+
+.star-icon {
+    font-size: 0.9em;
+    transform: translateY(-0.8px);
 }
 
 .stars-track {
@@ -273,10 +295,11 @@ button:active {
 }
 
 .stars-count {
-    width: 40px;
+    width: 50px;
     text-align: right;
     font-size: 0.875rem;
     color: var(--text-secondary);
+    white-space: nowrap;
 }
 
 .explanation-text {
@@ -359,25 +382,44 @@ button:active {
 }
 
 @keyframes fadeInDown {
-    from { opacity: 0; transform: translateY(-20px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 @media (max-width: 640px) {
     .input-wrapper {
         flex-direction: column;
     }
-    
+
     header h1 {
         font-size: 2rem;
     }

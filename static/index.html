@@ -1,14 +1,18 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Google Maps 評論智能分析 (XAI)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Noto+Sans+TC:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Noto+Sans+TC:wght@300;400;700;900&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="/static/styles.css">
 </head>
+
 <body>
     <div class="background-elements">
         <div class="blob blob-1"></div>
@@ -18,17 +22,17 @@
     <main class="container">
         <header class="glass-panel">
             <h1>Maps<span class="highlight">Intelligence</span></h1>
-            <p>透過 AI 與大數據，揭開 Google Maps 表面星等下的真實面貌</p>
+            <p>揭開 Google Maps 表面星等下的真實面貌</p>
         </header>
 
         <section class="input-section glass-panel">
             <div class="input-wrapper">
                 <input type="text" id="url-input" placeholder="貼上 Google Maps 分享網址 (例: https://maps.app.goo.gl/...)">
-                <button id="analyze-btn">開始解析</button>
+                <button id="analyze-btn">開始分析</button>
             </div>
             <div id="loading" class="hidden">
                 <div class="spinner"></div>
-                <p>AI 正在爬取與深度分析評論中，請稍候...</p>
+                <p>正在爬取與深度分析評論中，請稍候...</p>
             </div>
             <div id="error-message" class="error hidden"></div>
         </section>
@@ -36,12 +40,14 @@
         <section id="results" class="results-section hidden">
             <!-- 動態插入內容 -->
         </section>
-        
+
         <footer class="footer">
-            <p><a href="https://github.com/zjwen33/Data-Analysis-and-Machine-Learning-with-Python-2026-Spring/" target="_blank" class="subtle-link">View on GitHub</a></p>
+            <p><a href="https://github.com/zjwen33/Data-Analysis-and-Machine-Learning-with-Python-2026-Spring/"
+                    target="_blank" class="subtle-link">GitHub</a></p>
         </footer>
     </main>
 
     <script src="/static/script.js"></script>
 </body>
+
 </html>
