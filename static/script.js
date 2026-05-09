@@ -156,25 +156,5 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 100);
     }
 
-    // Developer Modal Logic
-    const devLink = document.getElementById('dev-portal-link');
-    const devModal = document.getElementById('dev-modal');
-    const closeModal = document.getElementById('close-modal');
 
-    if (devLink && devModal && closeModal) {
-        devLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            devModal.classList.remove('hidden');
-        });
-
-        closeModal.addEventListener('click', () => {
-            devModal.classList.add('hidden');
-        });
-
-        devModal.addEventListener('click', (e) => {
-            if (e.target === devModal) {
-                devModal.classList.add('hidden');
-            }
-        });
-    }
 });

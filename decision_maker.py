@@ -1,6 +1,4 @@
 import json
-import urllib.request
-import re
 import os
 from db_utils import get_reviews_collection
 
@@ -21,16 +19,6 @@ def load_keywords_file(filepath, default_content):
                 cat, words = line.split(':', 1)
                 categories[cat.strip()] = [w.strip() for w in words.split(',')]
     return categories
-
-def extract_data_id(url):
-    try:
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        res = urllib.request.urlopen(req)
-        final_url = res.geturl()
-        match = re.search(r'!1s(0x[0-9a-fA-F]+:0x[0-9a-fA-F]+)', final_url)
-        return match.group(1) if match else None
-    except:
-        return None
 
 def generate_decision_report(data_id, hl="zh-tw"):
     collection = get_reviews_collection()

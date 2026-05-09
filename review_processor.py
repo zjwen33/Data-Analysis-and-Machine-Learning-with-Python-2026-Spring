@@ -1,25 +1,8 @@
 import json
 import os
-import urllib.request
-import re
 from db_utils import get_reviews_collection
 
 KEYWORDS_PATH = 'fake_keywords.txt'
-
-def extract_data_id(url):
-    """將短網址展開並從中擷取 data_id"""
-    try:
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        res = urllib.request.urlopen(req)
-        final_url = res.geturl()
-        match = re.search(r'!1s(0x[0-9a-fA-F]+:0x[0-9a-fA-F]+)', final_url)
-        if match:
-            return match.group(1)
-        else:
-            return None
-    except Exception as e:
-        print(f"解析網址時發生錯誤: {e}")
-        return None
 
 def load_keywords():
     """讀取外部的非真實體驗字典檔"""

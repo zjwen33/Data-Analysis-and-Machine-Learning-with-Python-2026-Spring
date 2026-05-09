@@ -38,39 +38,9 @@
         </section>
         
         <footer class="footer">
-            <p><a href="#" id="dev-portal-link" class="subtle-link">Developer Access</a> | <a href="https://github.com" target="_blank" class="subtle-link">GitHub</a></p>
+            <p><a href="https://github.com/zjwen33/Data-Analysis-and-Machine-Learning-with-Python-2026-Spring/" target="_blank" class="subtle-link">View on GitHub</a></p>
         </footer>
     </main>
-
-    <!-- Developer Modal -->
-    <div id="dev-modal" class="modal hidden">
-        <div class="modal-content glass-panel">
-            <span class="close-btn" id="close-modal">&times;</span>
-            <h2>🛠️ Developer Data Access (Open Data)</h2>
-            <p class="explanation-text" style="margin-top:1rem;">我們秉持開放資料精神，提供唯讀的 MongoDB 連線字串，讓開發者可以直接存取並二次開發本系統的資料庫。</p>
-            
-            <div class="code-block" style="margin-top:1rem;">
-                <code>
-# MongoDB Read-Only Connection String
-MONGO_URI = "mongodb+srv://<public_user>:<password>@cluster0.mongodb.net/?retryWrites=true&w=majority"
-                </code>
-            </div>
-            
-            <p class="explanation-text" style="margin-top:1.5rem; color: var(--accent);">💡 Python 連線範例:</p>
-            <div class="code-block">
-                <pre><code>import pymongo
-
-client = pymongo.MongoClient(MONGO_URI)
-db = client['google_maps_reviews_db']
-collection = db['reviews']
-
-# 範例：找出所有包含假評論的店家
-results = collection.find({"analysis_result.fake_count": {"$gt": 0}})
-for doc in results:
-    print(doc["place_info"]["title"])</code></pre>
-            </div>
-        </div>
-    </div>
 
     <script src="/static/script.js"></script>
 </body>
