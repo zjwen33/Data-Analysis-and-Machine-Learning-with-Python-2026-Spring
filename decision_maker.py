@@ -1,10 +1,9 @@
-import sqlite3
 import json
 import urllib.request
 import re
 import os
+from db_utils import get_reviews_collection
 
-DB_PATH = 'reviews.db'
 POS_KEYWORDS_PATH = 'positive_keywords.txt'
 NEG_KEYWORDS_PATH = 'negative_keywords.txt'
 
@@ -33,26 +32,16 @@ def extract_data_id(url):
     except:
         return None
 
-def generate_decision_report(data_id):
-    if not os.path.exists(DB_PATH):
-        print("❌ 找不到資料庫。")
-        return
+def generate_decision_report(data_id, hl="zh-tw"):
+    collection = get_reviews_collection()
+    row = collection.find_one({"data_id": data_id, "hl": hl})
 
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute('''
-        SELECT reviews, analysis_result FROM review_history
-        WHERE data_id = ? ORDER BY created_at DESC LIMIT 1
-    ''', (data_id,))
-    row = cursor.fetchone()
-    conn.close()
-
-    if not row or not row[1]:
+    if not row or not row.get("analysis_result"):
         print("❌ 沒有找到分析紀錄，請先執行 review_fetcher.py 與 review_processor.py。")
-        return
+        return None
 
-    raw_reviews = json.loads(row[0])
-    analysis_result = json.loads(row[1])
+    raw_reviews = row.get("reviews", [])
+    analysis_result = row.get("analysis_result", {})
 
     # 1. 基礎數據
     total_count = analysis_result.get("total_reviews", 0)
@@ -102,72 +91,64 @@ def generate_decision_report(data_id):
     top_pos_cat = max(pos_counts, key=pos_counts.get) if pos_counts else None
     top_neg_cat = max(neg_counts, key=neg_counts.get) if neg_counts else None
 
-    print("\n" + "="*58)
-    print("🍔 可解釋性 AI 決策支援報告 (XAI Decision Report)")
-    print("="*58)
-    
-    # 產出：白話解釋生成 (動態字串模板組合，不使用 LLM)
-    print("\n📝 [星等真實度解析]")
-    if fake_count > 0:
-        diff = round(original_avg - real_avg, 1)
-        action = f"下修了 {diff} 顆星" if diff > 0 else (f"上調了 {abs(diff)} 顆星" if diff < 0 else "維持原星等")
-            
-        print(f"系統將這間店的評分從面上的 {original_avg} 顆星{action}，得出真實評分為 {real_avg} 顆星。")
-        print(f"主因是在這 {total_count} 則評論中，偵測到 {fake_ratio}%（共 {fake_count} 則）包含「打卡送禮」等潛在誘因。")
-        print(f"排除這些干擾後，我們對剩下的 {evaluated_reviews_count} 則純淨評論進行了文本深度解析。")
-    else:
-        print(f"系統評鑑這間店的結構相當健康！在 {total_count} 則留言中並無明顯被操作的打卡評論。")
-        print(f"其真實星等與表面星等一致，為穩定的 {real_avg} 顆星，由此為您展開細節解析：")
-
-    # 產出：優劣勢特徵提取
-    print("\n✨ [正負評價特徵提取]")
     has_pos = top_pos_cat and pos_counts[top_pos_cat] > 0
     has_neg = top_neg_cat and neg_counts[top_neg_cat] > 0
     
-    if has_pos:
-        print(f"✅ 【最大亮點】集中在「{top_pos_cat}」。")
-        print(f"   這群消費者最常提到的好評字眼是：{', '.join(list(hit_pos_keywords[top_pos_cat])[:7])}。")
+    report_data = {
+        "place_info": row.get("place_info", {}),
+        "metrics": {
+            "total_count": total_count,
+            "fake_count": fake_count,
+            "fake_ratio": fake_ratio,
+            "original_avg": original_avg,
+            "real_avg": real_avg,
+            "evaluated_reviews_count": evaluated_reviews_count
+        },
+        "highlights": {
+            "has_pos": has_pos,
+            "top_pos_cat": top_pos_cat,
+            "top_pos_keywords": list(hit_pos_keywords[top_pos_cat])[:7] if has_pos else [],
+            "has_neg": has_neg,
+            "top_neg_cat": top_neg_cat,
+            "top_neg_keywords": list(hit_neg_keywords[top_neg_cat])[:7] if has_neg else []
+        },
+        "rating_distribution": analysis_result.get("real_rating_distribution", {})
+    }
+
+    # 產出：白話解釋生成
+    explanation_texts = []
+    if fake_count > 0:
+        diff = round(original_avg - real_avg, 1)
+        action = f"下修了 {diff} 顆星" if diff > 0 else (f"上調了 {abs(diff)} 顆星" if diff < 0 else "維持原星等")
+        explanation_texts.append(f"系統將這間店的評分從面上的 {original_avg} 顆星{action}，得出真實評分為 {real_avg} 顆星。")
+        explanation_texts.append(f"主因是在這 {total_count} 則評論中，偵測到 {fake_ratio}%（共 {fake_count} 則）包含「打卡送禮」等潛在誘因。")
+        explanation_texts.append(f"排除這些干擾後，我們對剩下的 {evaluated_reviews_count} 則純淨評論進行了文本深度解析。")
     else:
-        print("✅ 【最大亮點】：真實評論中並無特別突出的好評項目。")
-        
-    if has_neg:
-        print(f"⚠️ 【最大隱憂】出現在「{top_neg_cat}」。")
-        print(f"   遭到抱怨最多次的災情字眼為：{', '.join(list(hit_neg_keywords[top_neg_cat])[:7])}。")
-    else:
-        print("⚠️ 【最大隱憂】：目前的真實消費者中，並未反應出任何嚴重的客訴雷區。")
+        explanation_texts.append(f"系統評鑑這間店的結構相當健康！在 {total_count} 則留言中並無明顯被操作的打卡評論。")
+        explanation_texts.append(f"其真實星等與表面星等一致，為穩定的 {real_avg} 顆星，由此為您展開細節解析：")
+    
+    report_data["explanations"] = explanation_texts
 
     # 產出：情境導向行動建議
-    print("\n💡 [情境導向行動建議]")
+    advice_texts = []
     if has_neg and top_neg_cat == "環境與衛生":
-        print(f"▶ 避坑提示：若您此次聚餐對「環境品質、約會氛圍」要求極高，由於出現了衛生疑慮，強烈建議更換聚餐地點。")
-        print("▶ 適合情境：這間店較適合只尋求外帶、或是根本不在意內用環境只求果腹的客人。")
+        advice_texts.append("▶ 避坑提示：若您此次聚餐對「環境品質、約會氛圍」要求極高，由於出現了衛生疑慮，強烈建議更換聚餐地點。")
+        advice_texts.append("▶ 適合情境：這間店較適合只尋求外帶、或是根本不在意內用環境只求果腹的客人。")
     elif has_neg and top_neg_cat == "服務與態度":
-        print(f"▶ 避坑提示：這家店在「服務品質」上累積了較多客怨。若您不喜歡看店員臉色或排隊受氣，最好三思。")
-        print("▶ 適合情境：對服務態度容忍度高、不太在意店員反應的人。")
+        advice_texts.append("▶ 避坑提示：這家店在「服務品質」上累積了較多客怨。若您不喜歡看店員臉色或排隊受氣，最好三思。")
+        advice_texts.append("▶ 適合情境：對服務態度容忍度高、不太在意店員反應的人。")
     elif has_pos and top_pos_cat == "餐點與食物":
-        print("▶ 適合情境：這間店的本體就是老饕最愛的享受！對於「追求純粹美味」的食客，非常推薦親自鑑定。")
+        advice_texts.append("▶ 適合情境：這間店的本體就是老饕最愛的享受！對於「追求純粹美味」的食客，非常推薦親自鑑定。")
     elif has_pos and top_pos_cat == "價格與CP值":
-        print("▶ 適合情境：這是一家以「CP值」取勝的好去處！極力推薦給月底想省錢、食量大的學生或小資族群。")
+        advice_texts.append("▶ 適合情境：這是一家以「CP值」取勝的好去處！極力推薦給月底想省錢、食量大的學生或小資族群。")
     else:
         if real_avg >= 4.0:
-            print("▶ 綜合建議：就我們的資料解析，這是一間各項表現相對均衡、安分守己的好店，適合多數您的日常用餐情境。")
+            advice_texts.append("▶ 綜合建議：就我們的資料解析，這是一間各項表現相對均衡、安分守己的好店，適合多數您的日常用餐情境。")
         else:
-            print("▶ 綜合建議：本店表現較為平庸落於俗套。雖無致命缺點，但也無特別突出的優勢，建議您同時搜尋周邊其他名單比較。")
-        
-    print("="*58 + "\n")
+            advice_texts.append("▶ 綜合建議：本店表現較為平庸落於俗套。雖無致命缺點，但也無特別突出的優勢，建議您同時搜尋周邊其他名單比較。")
+            
+    report_data["advice"] = advice_texts
 
-if __name__ == '__main__':
-    while True:
-        try:
-            url = input("👉 請輸入 Google Maps 分享網址 (或輸入 q 離開): ").strip()
-        except EOFError:
-            break
-        if url.lower() == 'q':
-            break
-        if not url: continue
-        
-        data_id = extract_data_id(url)
-        if data_id:
-            generate_decision_report(data_id)
-        else:
-            print("❌ 無法解析該網址的 data_id。")
+    return report_data
+
+# CLI 測試區塊已移除，本程式目前作為網頁 API 的模組使用。

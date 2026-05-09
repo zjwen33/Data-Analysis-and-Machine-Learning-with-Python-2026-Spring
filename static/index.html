@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Maps 評論智能分析 (XAI)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Noto+Sans+TC:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="background-elements">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+
+    <main class="container">
+        <header class="glass-panel">
+            <h1>Maps<span class="highlight">Intelligence</span></h1>
+            <p>透過 AI 與大數據，揭開 Google Maps 表面星等下的真實面貌</p>
+        </header>
+
+        <section class="input-section glass-panel">
+            <div class="input-wrapper">
+                <input type="text" id="url-input" placeholder="貼上 Google Maps 分享網址 (例: https://maps.app.goo.gl/...)">
+                <button id="analyze-btn">開始解析</button>
+            </div>
+            <div id="loading" class="hidden">
+                <div class="spinner"></div>
+                <p>AI 正在爬取與深度分析評論中，請稍候...</p>
+            </div>
+            <div id="error-message" class="error hidden"></div>
+        </section>
+
+        <section id="results" class="results-section hidden">
+            <!-- 動態插入內容 -->
+        </section>
+        
+        <footer class="footer">
+            <p><a href="#" id="dev-portal-link" class="subtle-link">Developer Access</a> | <a href="https://github.com" target="_blank" class="subtle-link">GitHub</a></p>
+        </footer>
+    </main>
+
+    <!-- Developer Modal -->
+    <div id="dev-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <span class="close-btn" id="close-modal">&times;</span>
+            <h2>🛠️ Developer Data Access (Open Data)</h2>
+            <p class="explanation-text" style="margin-top:1rem;">我們秉持開放資料精神，提供唯讀的 MongoDB 連線字串，讓開發者可以直接存取並二次開發本系統的資料庫。</p>
+            
+            <div class="code-block" style="margin-top:1rem;">
+                <code>
+# MongoDB Read-Only Connection String
+MONGO_URI = "mongodb+srv://<public_user>:<password>@cluster0.mongodb.net/?retryWrites=true&w=majority"
+                </code>
+            </div>
+            
+            <p class="explanation-text" style="margin-top:1.5rem; color: var(--accent);">💡 Python 連線範例:</p>
+            <div class="code-block">
+                <pre><code>import pymongo
+
+client = pymongo.MongoClient(MONGO_URI)
+db = client['google_maps_reviews_db']
+collection = db['reviews']
+
+# 範例：找出所有包含假評論的店家
+results = collection.find({"analysis_result.fake_count": {"$gt": 0}})
+for doc in results:
+    print(doc["place_info"]["title"])</code></pre>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>

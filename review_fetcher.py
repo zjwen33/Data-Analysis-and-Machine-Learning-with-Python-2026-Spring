@@ -1,13 +1,11 @@
 import os
 import serpapi
-import sqlite3
 import json
 import datetime
 import urllib.request
 import re
 import random
-
-DB_PATH = 'reviews.db'
+from db_utils import get_reviews_collection
 
 def extract_data_id(url):
     """將網址展開並從中擷取 data_id"""
@@ -33,25 +31,6 @@ def extract_data_cid(data_id):
     except Exception:
         pass
     return None
-
-def init_db():
-    """初始化資料庫與資料表"""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    # 建立評論與地標資訊的歷史資料表
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS places_cache (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            place_id TEXT UNIQUE NOT NULL,
-            data_id TEXT NOT NULL,
-            data_cid TEXT NOT NULL,
-            place_info TEXT NOT NULL,
-            reviews TEXT NOT NULL,
-            created_at TIMESTAMP NOT NULL
-        )
-    ''')
-    conn.commit()
-    conn.close()
 
 def fetch_with_api_keys(api_keys, params, engine="google_maps_reviews"):
     """共用的 API 請求邏輯，自動切換 API Key"""
@@ -87,7 +66,7 @@ def get_place_and_reviews(url, hl, api_keys):
     透過 data_id 檢查快取以節省額度。
     第一次 API：使用 data_cid 搜尋並獲得 place_info 及 place_id。
     第二次 API：使用 data_id 搜尋 google_maps_reviews 獲得評論。
-    並將結果存入資料庫 places_cache 中。
+    並將結果存入 MongoDB 中。
     """
     extracted_data_id = extract_data_id(url)
     if not extracted_data_id:
@@ -98,25 +77,18 @@ def get_place_and_reviews(url, hl, api_keys):
         raise ValueError("無法從 data_id 轉換取得 data_cid。")
 
     print(f"成功擷取到 data_id: {extracted_data_id}, data_cid: {data_cid}")
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
+    collection = get_reviews_collection()
 
     # 檢查快取
-    cursor.execute('''
-        SELECT place_info, reviews, created_at FROM places_cache
-        WHERE data_cid = ?
-    ''', (data_cid,))
-    row = cursor.fetchone()
+    row = collection.find_one({"data_cid": data_cid})
     
     now = datetime.datetime.now()
     if row:
-        cached_info_str, cached_reviews_str, created_at_str = row
-        created_at = datetime.datetime.fromisoformat(created_at_str)
+        created_at = row.get("created_at")
         # 30 天內的快取直接回傳
-        if (now - created_at).days < 30:
-            print(f"使用快取資料 (儲存時間: {created_at_str})")
-            conn.close()
-            return json.loads(cached_info_str), json.loads(cached_reviews_str)
+        if created_at and (now - created_at).days < 30:
+            print(f"使用快取資料 (儲存時間: {created_at})")
+            return extracted_data_id, row.get("place_info", {}), row.get("reviews", [])
 
     # ====== 1. 執行第一次 API 請求：取得地點詳細資訊 ======
     print("發送第一次請求 (google_maps) 獲取地點資訊...")
@@ -184,54 +156,39 @@ def get_place_and_reviews(url, hl, api_keys):
             
     # 沒有遇到中斷錯誤才能存快取
     if not (has_error and len(all_reviews) == 0):
-        print(f"將新資料儲存至 places_cache (地標: {place_id} | 評論 {len(all_reviews)} 筆)...")
-        now_str = now.isoformat()
+        print(f"將新資料儲存至 MongoDB (地標: {place_id} | 評論 {len(all_reviews)} 筆)...")
         
-        # 使用 REPLACE INTO 來更新舊快取 (因 place_id 為 UNIQUE)
-        cursor.execute('''
-            REPLACE INTO places_cache (place_id, data_id, data_cid, place_info, reviews, created_at)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (place_id, data_id, data_cid, json.dumps(place_info, ensure_ascii=False), json.dumps(all_reviews, ensure_ascii=False), now_str))
-        conn.commit()
-    conn.close()
-    return place_info, all_reviews
+        # 使用 update_one 更新或插入
+        collection.update_one(
+            {"data_cid": data_cid},
+            {
+                "$set": {
+                    "place_id": place_id,
+                    "data_id": data_id,
+                    "data_cid": data_cid,
+                    "place_info": place_info,
+                    "reviews": all_reviews,
+                    "created_at": now,
+                    "hl": hl
+                }
+            },
+            upsert=True
+        )
+    return data_id, place_info, all_reviews
 
 
 def load_api_keys():
-    """從 .env 讀取所有 SERPAPI_KEY 開頭的環境變數"""
+    """從環境變數讀取所有 SERPAPI_KEY 開頭的金鑰"""
+    # 確保本地端測試時可以載入 .env
+    from dotenv import load_dotenv
+    load_dotenv()
+    
     keys = []
-    if os.path.exists('.env'):
-        with open('.env', 'r') as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith('#') and '=' in line:
-                    k, v = line.split('=', 1)
-                    if k.strip().startswith('SERPAPI_KEY'):
-                        keys.append(v.strip())
-    # 去除重複，確保按順序排列
+    for k, v in os.environ.items():
+        if k.startswith('SERPAPI_KEY') and v.strip():
+            keys.append(v.strip())
+            
     return list(dict.fromkeys(keys)) if keys else []
 
 
-if __name__ == '__main__':
-    init_db()
-    
-    API_KEYS = load_api_keys()
-    if not API_KEYS:
-        print("錯誤：未在 .env 檔案中找到 API Key！請建立 .env 檔案並設定 SERPAPI_KEY... 變數。")
-        exit(1)
-        
-    hl_lang = "zh-tw"
-    
-    while True:
-        input_url = input("\n請輸入 Google Maps 分享網址或輸入 q 離開): ").strip()
-        if input_url.lower() == 'q':
-            break
-        if not input_url:
-            continue
-            
-        try:
-            place_info, reviews_data = get_place_and_reviews(input_url, hl_lang, API_KEYS)
-            print(f"地標名稱: {place_info.get('title')}")
-            print(f"總共取得 {len(reviews_data)} 筆評論")
-        except Exception as e:
-            print(f"寫入或獲取資料失敗: {e}")
+# CLI 測試區塊已移除，本程式目前作為網頁 API 的模組使用。
