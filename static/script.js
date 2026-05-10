@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             renderResults(result.data);
             resultsSection.classList.remove('hidden');
-            
+
         } catch (err) {
             errorEl.textContent = err.message;
             errorEl.classList.remove('hidden');
@@ -46,25 +46,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderResults(data) {
-        const { place_info, metrics, highlights, rating_distribution, explanations, advice } = data;
-        
+        const { place_info, metrics, highlights, rating_distribution, explanations, advice, trend_data } = data;
+
         let html = `
             <div class="card">
                 <h2>🏬 ${place_info.title || '地標資訊'}</h2>
                 <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">${place_info.address || ''}</p>
                 
                 <div class="metrics-grid">
-                    <div class="metric-box">
-                        <div class="metric-value">${metrics.real_avg.toFixed(1)}</div>
-                        <div class="metric-label">真實星等</div>
+                    <div class="metric-box" style="opacity: 0.8;">
+                        <div class="metric-value" style="color: var(--text-secondary);">${metrics.google_original_rating || '-'}</div>
+                        <div class="metric-label">Google 原始星等</div>
+                    </div>
+                    <div class="metric-box" style="border: 1px solid rgba(59, 130, 246, 0.5); background: rgba(59, 130, 246, 0.1);">
+                        <div class="metric-value" style="color: var(--accent);">${metrics.real_avg.toFixed(1)}</div>
+                        <div class="metric-label">XAI 真實星等</div>
                     </div>
                     <div class="metric-box">
                         <div class="metric-value">${metrics.evaluated_reviews_count}</div>
-                        <div class="metric-label">有效純淨評論數</div>
-                    </div>
-                    <div class="metric-box">
-                        <div class="metric-value" style="color: var(--danger);">${metrics.fake_ratio}%</div>
-                        <div class="metric-label">誘因評論佔比</div>
+                        <div class="metric-label">過濾後評論數</div>
                     </div>
                 </div>
 
@@ -87,7 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ['5', '4', '3', '2', '1'].forEach(star => {
             const count = rating_distribution ? (rating_distribution[star] || 0) : 0;
             const percentage = maxCount === 0 ? 0 : (count / maxCount) * 100;
-            
+
             html += `
                 <div class="stars-bar">
                     <div class="stars-label"><span class="star-num">${star}</span> <span class="star-icon">★</span></div>
@@ -100,6 +100,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         html += `
+                </div>
+            </div>
+
+            <div class="card" id="trend-card">
+                <h2>📈 有效評論趨勢 (月)</h2>
+                <div style="position: relative; height: 300px; width: 100%;">
+                    <canvas id="trend-chart"></canvas>
                 </div>
             </div>
             
@@ -154,6 +161,66 @@ document.addEventListener('DOMContentLoaded', () => {
                 bar.style.width = bar.getAttribute('data-width');
             });
         }, 100);
+
+        // Render trend chart if data is available
+        if (trend_data && trend_data.length > 0) {
+            const ctx = document.getElementById('trend-chart').getContext('2d');
+            
+            Chart.defaults.color = 'rgba(255, 255, 255, 0.7)';
+            Chart.defaults.font.family = "'Inter', 'Noto Sans TC', sans-serif";
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: trend_data.map(d => d.month),
+                    datasets: [
+                        {
+                            type: 'line',
+                            label: '平均星等',
+                            data: trend_data.map(d => d.avg_rating),
+                            borderColor: '#8b5cf6',
+                            backgroundColor: '#8b5cf6',
+                            borderWidth: 2,
+                            tension: 0.3,
+                            yAxisID: 'y',
+                            pointBackgroundColor: '#1e293b',
+                            pointBorderColor: '#8b5cf6',
+                            pointBorderWidth: 2,
+                            pointRadius: 4
+                        },
+                        {
+                            type: 'bar',
+                            label: '評論數量',
+                            data: trend_data.map(d => d.review_count),
+                            backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                            borderColor: 'rgba(59, 130, 246, 0.5)',
+                            borderWidth: 1,
+                            borderRadius: 4,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    scales: {
+                        y: {
+                            type: 'linear', display: true, position: 'left', min: 1, max: 5,
+                            title: { display: true, text: '平均星等 (★)' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        },
+                        y1: {
+                            type: 'linear', display: true, position: 'right',
+                            title: { display: true, text: '評論數量 (則)' },
+                            grid: { drawOnChartArea: false }
+                        },
+                        x: { grid: { display: false } }
+                    },
+                    plugins: { legend: { position: 'top' } }
+                }
+            });
+        }
     }
 
 

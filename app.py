@@ -32,7 +32,7 @@ async def analyze_url(req: AnalyzeRequest):
         # Step 0: Extract data_id
         data_id = extract_data_id(url)
         if not data_id:
-            raise HTTPException(status_code=400, detail="Invalid Google Maps URL: Cannot extract data_id")
+            raise HTTPException(status_code=400, detail="❌ 無法解析網址！請確保您輸入的是正確的 Google Maps 分享連結 (包含店家資訊)。")
 
         # Step 1: Fetch
         api_keys = load_api_keys()

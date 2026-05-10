@@ -82,13 +82,35 @@ def generate_decision_report(data_id, hl="zh-tw"):
     has_pos = top_pos_cat and pos_counts[top_pos_cat] > 0
     has_neg = top_neg_cat and neg_counts[top_neg_cat] > 0
     
+    # 計算時間序列趨勢 (依 YYYY-MM 聚合)
+    trend_dict = {}
+    for rv in real_reviews:
+        iso_date = rv.get("iso_date")
+        rating = rv.get("rating")
+        if iso_date and rating is not None:
+            # 取 YYYY-MM
+            month_key = iso_date[:7]
+            if month_key not in trend_dict:
+                trend_dict[month_key] = {"sum": 0, "count": 0}
+            trend_dict[month_key]["sum"] += rating
+            trend_dict[month_key]["count"] += 1
+            
+    # 轉換為排序後的陣列
+    trend_data = []
+    for month in sorted(trend_dict.keys()):
+        trend_data.append({
+            "month": month,
+            "avg_rating": round(trend_dict[month]["sum"] / trend_dict[month]["count"], 2),
+            "review_count": trend_dict[month]["count"]
+        })
+    
+    google_original_rating = row.get("place_info", {}).get("rating", original_avg)
+    
     report_data = {
         "place_info": row.get("place_info", {}),
         "metrics": {
             "total_count": total_count,
-            "fake_count": fake_count,
-            "fake_ratio": fake_ratio,
-            "original_avg": original_avg,
+            "google_original_rating": google_original_rating,
             "real_avg": real_avg,
             "evaluated_reviews_count": evaluated_reviews_count
         },
@@ -100,20 +122,15 @@ def generate_decision_report(data_id, hl="zh-tw"):
             "top_neg_cat": top_neg_cat,
             "top_neg_keywords": list(hit_neg_keywords[top_neg_cat])[:7] if has_neg else []
         },
-        "rating_distribution": analysis_result.get("real_rating_distribution", {})
+        "rating_distribution": analysis_result.get("real_rating_distribution", {}),
+        "trend_data": trend_data
     }
 
-    # 產出：白話解釋生成
-    explanation_texts = []
-    if fake_count > 0:
-        diff = round(original_avg - real_avg, 1)
-        action = f"下修了 {diff} 顆星" if diff > 0 else (f"上調了 {abs(diff)} 顆星" if diff < 0 else "維持原星等")
-        explanation_texts.append(f"系統將這間店的評分從面上的 {original_avg} 顆星{action}，得出真實評分為 {real_avg} 顆星。")
-        explanation_texts.append(f"主因是在這 {total_count} 則評論中，偵測到 {fake_ratio}%（共 {fake_count} 則）包含「打卡送禮」等潛在誘因。")
-        explanation_texts.append(f"排除這些干擾後，我們對剩下的 {evaluated_reviews_count} 則純淨評論進行了文本深度解析。")
-    else:
-        explanation_texts.append(f"系統評鑑這間店的結構相當健康！在 {total_count} 則留言中並無明顯被操作的打卡評論。")
-        explanation_texts.append(f"其真實星等與表面星等一致，為穩定的 {real_avg} 顆星，由此為您展開細節解析：")
+    # 產出：過濾階段說明
+    explanation_texts = [
+        f"📍 第一階段過濾：優先爬取具備高信賴度的「在地嚮導」與真實買家評論，作為基準參考。",
+        f"📍 第二階段過濾：從精選的 {total_count} 則評論中，再由 AI 剔除含有潛在誘因的打卡留言，還原出最終的真實星等。"
+    ]
     
     report_data["explanations"] = explanation_texts
 

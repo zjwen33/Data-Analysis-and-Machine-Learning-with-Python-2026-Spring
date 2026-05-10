@@ -11,9 +11,9 @@ def extract_data_id(url):
     """將網址展開並從中擷取 data_id"""
     try:
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        res = urllib.request.urlopen(req)
+        res = urllib.request.urlopen(req, timeout=5)
         final_url = res.geturl()
-        match = re.search(r'!1s(0x[0-9a-fA-F]+:0x[0-9a-fA-F]+)', final_url)
+        match = re.search(r'(?:!1s|ftid=)(0x[0-9a-fA-F]+:0x[0-9a-fA-F]+)', final_url)
         if match:
             return match.group(1)
         else:
