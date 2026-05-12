@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div class="metric-box" style="border: 1px solid rgba(59, 130, 246, 0.5); background: rgba(59, 130, 246, 0.1);">
                         <div class="metric-value" style="color: var(--accent);">${metrics.real_avg.toFixed(1)}</div>
-                        <div class="metric-label">XAI 真實星等</div>
+                        <div class="metric-label">真實星等</div>
                     </div>
                     <div class="metric-box">
                         <div class="metric-value">${metrics.evaluated_reviews_count}</div>
@@ -165,10 +165,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Render trend chart if data is available
         if (trend_data && trend_data.length > 0) {
             const ctx = document.getElementById('trend-chart').getContext('2d');
-            
+
             Chart.defaults.color = 'rgba(255, 255, 255, 0.7)';
             Chart.defaults.font.family = "'Inter', 'Noto Sans TC', sans-serif";
-            
+
             new Chart(ctx, {
                 type: 'bar',
                 data: {
