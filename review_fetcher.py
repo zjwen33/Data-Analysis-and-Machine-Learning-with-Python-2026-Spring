@@ -8,16 +8,32 @@ import random
 from db_utils import get_reviews_collection
 
 def extract_data_id(url):
-    """將網址展開並從中擷取 data_id"""
+    """從網址中擷取 data_id，支援直接解析長網址與展開短網址"""
+    pattern = r'(?:!1s|ftid=)(0x[0-9a-fA-F]+:0x[0-9a-fA-F]+)'
+    
+    # 1. 先嘗試直接從原始網址擷取
+    # 這樣可以略過不必要的網路請求，也直接避開了長網址中包含中文導致的連線錯誤
+    match = re.search(pattern, url)
+    if match:
+        return match.group(1)
+    
+    # 2. 若原始網址沒有 data_id (例如短網址)，則發送請求展開網址
     try:
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        # 使用 urllib.parse.quote 處理網址中可能包含的非 ASCII 字元 (如中文)
+        # safe 參數保留網址結構必要的符號不被轉換
+        encoded_url = urllib.parse.quote(url, safe=":/?=&%#+!$,;'@()*[]")
+        
+        req = urllib.request.Request(encoded_url, headers={'User-Agent': 'Mozilla/5.0'})
         res = urllib.request.urlopen(req, timeout=5)
         final_url = res.geturl()
-        match = re.search(r'(?:!1s|ftid=)(0x[0-9a-fA-F]+:0x[0-9a-fA-F]+)', final_url)
+        
+        # 從展開後的最終網址再次嘗試擷取
+        match = re.search(pattern, final_url)
         if match:
             return match.group(1)
         else:
             return None
+            
     except Exception as e:
         print(f"解析網址時發生錯誤: {e}")
         return None
